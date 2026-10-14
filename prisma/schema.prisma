@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id           Int           @id @default(autoincrement())
+  name         String
+  phone        String        @unique
+  email        String?
+  reservations Reservation[]
+
+  @@map("customers")
+}
+
+model Table {
+  id           Int           @id @default(autoincrement())
+  number       Int           @unique
+  capacity     Int
+  reservations Reservation[]
+
+  @@map("tables")
+}
+
+model Reservation {
+  id          Int         @id @default(autoincrement())
+  customerId  Int         @map("customer_id")
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  tableId     Int         @map("table_id")
+  table       Table       @relation(fields: [tableId], references: [id])
+  reservedAt  DateTime    @map("reserved_at")
+  durationMin Int         @map("duration_min")
+  guests      Int
+  status      String      @default("BOOKED")
+  orders      Order[]
+
+  @@index([tableId, reservedAt], map: "idx_res_table_time")
+  @@index([reservedAt], map: "idx_res_time")
+  @@map("reservations")
+}
+
+model MenuItem {
+  id         Int         @id @default(autoincrement())
+  name       String
+  category   String
+  price      Int
+  orderItems OrderItem[]
+
+  @@map("menu_items")
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  reservationId Int         @map("reservation_id")
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  createdAt     DateTime    @default(now()) @map("created_at")
+  subtotal      Int
+  serviceCharge Int         @map("service_charge")
+  discount      Int
+  total         Int
+  orderItems    OrderItem[]
+
+  @@index([createdAt], map: "idx_orders_created")
+  @@map("orders")
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int      @map("order_id")
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId Int      @map("menu_item_id")
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  qty        Int
+  unitPrice  Int      @map("unit_price")
+
+  @@index([orderId], map: "idx_items_order")
+  @@map("order_items")
+}
